@@ -48,12 +48,22 @@
         }
 
         .report-content { flex-grow: 1; }
-        .report-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 30px; }
+        .report-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
         .brand { display: flex; align-items: center; justify-content: center; gap: 15px; }
         .logo-img { width: 45px; height: 45px; }
         .logo-img img { width: 100%; height: 100%; object-fit: contain; }
+        .company-text { display: flex; flex-direction: column; align-items: center; }
         .company-cn { font-size: 26px; font-weight: bold; margin: 0; }
-        .company-en { font-size: 9.5px; font-weight: bold; letter-spacing: 0.5px; }
+        .company-en { 
+            font-size: 9.5px; 
+            font-weight: bold; 
+            letter-spacing: 0.3px; 
+            max-width: 100%;
+            text-align: center;
+            line-height: 1.4;
+            word-break: break-all;
+            display: inline-block;
+        }
         
         .doc-name { text-align: center; font-size: 24px; font-weight: bold; margin: 40px 0; letter-spacing: 6px; text-decoration: underline; text-underline-offset: 10px; }
         .meta-box { font-size: 14px; display: flex; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px dashed #ccc; padding-bottom: 10px; }
@@ -85,12 +95,12 @@
     <div class="input-item"><label>上传 Logo</label><input type="file" id="upLogo" accept="image/*"></div>
     <div class="input-item"><label>公司中英名称</label>
         <input type="text" id="inCn" value="深圳市恒基承达商务有限公司">
-        <input type="text" id="inEn" value="Shenzhen Hengji Chengda Business Co., Ltd." style="margin-top:5px">
+        <input type="text" id="inEn" value="深圳市南山区南头街道大汪山社区桃园东路1号西海明珠花园F座2109-8" style="margin-top:5px">
     </div>
     <div class="input-item"><label>客户名称</label><input type="text" id="inCust" placeholder="客户姓名"></div>
     <div class="input-item"><label>路线设置 (例如: 出发 → 目的地)</label><input type="text" id="inRoute" value="中国🇨🇳 → 日本🇯🇵"></div>
     <div class="input-item"><label>运输方式</label><input type="text" id="inShip" value="空运"></div>
-    <div class="input-item"><label>智能识别信息</label><textarea id="inSmart" placeholder="在此粘贴单号等信息..."></textarea></div>
+    <div class="input-item"><label>智能识别信息</label><textarea id="inSmart" placeholder="在此粘贴单号、计费重、品名、件数等信息..."></textarea></div>
     <div class="input-item"><label>表格备注 (含附加费)</label><input type="text" id="inTableNote" placeholder="例如：报关费100"></div>
     <div class="input-item"><label>报价单价 (¥/kg)</label><input type="number" id="inPrice" value="" step="0.01"></div>
     
@@ -107,9 +117,11 @@
             <div class="report-header">
                 <div class="brand">
                     <div class="logo-img" id="outLogo">HGCD</div>
-                    <div class="company-cn" id="outCn">深圳市恒基承达商务有限公司</div>
+                    <div class="company-text">
+                        <div class="company-cn" id="outCn">深圳市恒基承达商务有限公司</div>
+                        <div class="company-en" id="outEn"> 深圳市南山区南头街道大汪山社区桃园东路1号西海明珠花园F座2109-8 </div>
+                    </div>
                 </div>
-                <div class="company-en" id="outEn"> Shenzhen Hengji Chengda Business Co., Ltd. </div>
             </div>
             <h2 class="doc-name">货运费用确认单</h2>
             <div class="meta-box">
@@ -125,9 +137,9 @@
                     <tr>
                         <th width="22%">单号</th>
                         <th width="12%">体积(m³)</th>
-                        <th width="12%">重量(KG)</th>
+                        <th width="12%">毛重（KG）</th>
                         <th width="12%">计费重</th>
-                        <th width="8%">数量</th>
+                        <th width="8%">件数</th>
                         <th width="14%">品名</th>
                         <th width="20%">备注</th>
                     </tr>
@@ -165,29 +177,37 @@
 
     function doUpdate() {
         const text = document.getElementById('inSmart').value;
-        const price = parseFloat(document.getElementById('inPrice').value) || 0;
+        const inputPriceVal = document.getElementById('inPrice').value;
+        const smartPriceMatch = text.match(/(?:报价单价|运费单价|单价|报价|价格)[:：]?\s*[¥￥]?\s*(\d+(\.\d+)?)(?:\s*\/\s*(?:kg|KG))?/);
+        const price = parseFloat(inputPriceVal || (smartPriceMatch ? smartPriceMatch[1] : "")) || 0;
+        if (!inputPriceVal && smartPriceMatch) {
+            document.getElementById('inPrice').value = price.toFixed(2);
+        }
         const tableNote = document.getElementById('inTableNote').value || "-";
         const customRoute = document.getElementById('inRoute').value || "未填写路线";
         
         const orderNo = (text.match(/(?:HET|SHIP-|单号)[:：]?\s*([A-Z0-9\-]+)/i) || ["", "未识别"])[1];
-        const billWeight = parseFloat((text.match(/(?:计费重|计费重量)[:：]?\s*(\d+(\.\d+)?)/) || ["", 0])[1]);
-        const actWeight = parseFloat((text.match(/(?:实际重量|重量)[:：]?\s*(\d+(\.\d+)?)/) || ["", 0])[1]);
+        const billWeightMatch = text.match(/(?:计费重|计费重量)[:：]?\s*(\d+(\.\d+)?)(?:\s*(?:kg|KG|㎏))?/);
+        const actWeightMatch = text.match(/(?:实际重量|实重|重量)[:：]?\s*(\d+(\.\d+)?)(?:\s*(?:kg|KG|㎏))?/);
+        const billWeight = billWeightMatch ? parseFloat(billWeightMatch[1]) : null;
+        const actWeight = actWeightMatch ? parseFloat(actWeightMatch[1]) : 0;
         const volume = (text.match(/(?:体积|实际体积)[:：]?\s*(\d+(\.\d+)?)/) || ["", "0.00"])[1];
-        const qty = parseInt((text.match(/(?:件数[:：]\s*|==)(\d+)/) || ["", 0])[1]);
-        const product = (text.match(/(?:品名[:：]\s*)(\S+)/) || ["", "未识别"])[1];
+        const qtyMatch = text.match(/(?:件数|数量)[:：]?\s*(\d+)\s*件?/);
+        const qty = qtyMatch ? parseInt(qtyMatch[1]) : null;
+        const product = (text.match(/(?:品名)[:：]?\s*([^\s，,]+)/) || ["", "无法识别"])[1];
 
         let extraFee = 0;
         const feeMatch = tableNote.match(/\d+(\.\d+)?/);
         if (feeMatch) extraFee = parseFloat(feeMatch[0]);
-        const total = (billWeight * price) + extraFee;
+        const total = ((billWeight || 0) * price) + extraFee;
 
         globalData = { 
             cust: document.getElementById('inCust').value || "客户", 
             no: orderNo, 
             vol: volume, 
             actW: actWeight.toFixed(2), 
-            billW: billWeight.toFixed(2), 
-            qty: qty, 
+            billW: billWeight !== null ? billWeight.toFixed(2) : "无法识别", 
+            qty: qty ?? 0, 
             pro: product, 
             note: tableNote,
             price: price.toFixed(2),
@@ -204,8 +224,10 @@
         document.getElementById('outRoute').innerText = customRoute;
         
         document.getElementById('outDesc').innerText = `运输方式：${document.getElementById('inShip').value} | 客户：${globalData.cust}`;
-        document.getElementById('tableBody').innerHTML = `<tr><td>${orderNo}</td><td>${volume}</td><td>${actWeight.toFixed(2)}</td><td>${billWeight.toFixed(2)}</td><td>${qty}</td><td>${product}</td><td>${tableNote}</td></tr>`;
-        document.getElementById('outSum').innerText = `汇总：${qty}件 / ${billWeight.toFixed(2)}kg`;
+        const billWeightDisplay = billWeight !== null ? billWeight.toFixed(2) : "无法识别";
+        const qtyDisplay = qty !== null ? qty : "无法识别";
+        document.getElementById('tableBody').innerHTML = `<tr><td>${orderNo}</td><td>${volume}</td><td>${actWeight.toFixed(2)}</td><td>${billWeightDisplay}</td><td>${qtyDisplay}</td><td>${product}</td><td>${tableNote}</td></tr>`;
+        document.getElementById('outSum').innerText = `汇总：${qtyDisplay}件 / ${billWeightDisplay}${billWeightDisplay === "无法识别" ? "" : "kg"}`;
         document.getElementById('outUnitPrice').innerText = `¥${price.toFixed(2)} / kg`;
         document.getElementById('outTotal').innerText = `¥${globalData.total}`;
         document.getElementById('outGenAt').innerText = new Date().toLocaleString();
@@ -231,7 +253,7 @@
             blob = pdf.output('blob');
         } else {
             const csvRows = [
-                ["客户名称", "运单号", "体积(m3)", "重量(kg)", "计费重(kg)", "件数", "品名", "备注", "单价", "总计(元)"],
+                ["客户名称", "运单号", "体积(m3)", "毛重(kg)", "计费重", "件数", "品名", "备注", "单价", "总计(元)"],
                 [globalData.cust, globalData.no, globalData.vol, globalData.actW, globalData.billW, globalData.qty, globalData.pro, globalData.note, globalData.price, globalData.total]
             ];
             const csvString = "\ufeff" + csvRows.map(row => row.map(v => `"${v}"`).join(",")).join("\n");
