@@ -100,6 +100,7 @@
         .fcl-table th, .fcl-table td { border: 1px solid #000; padding: 6px 4px; text-align: center; word-break: break-all; }
         .fcl-table th { background: #f5f5f5; }
         .fcl-amount { font-weight: bold; }
+        .fcl-detail-name { white-space: pre-wrap; text-align: left; padding-left: 6px; }
         .fcl-wrap { width: 1123px; min-height: 794px; padding: 40px 40px; }
         .hidden { display: none !important; }
     </style>
@@ -234,6 +235,7 @@
         <button class="btn-csv" onclick="processFileFcl('csv')">③ 分享/下载 CSV</button>
         <button class="btn-preview btn-clear" onclick="clearCache('fcl')">清除缓存</button>
         <button class="btn-preview" onclick="addFclRow()">新增序号行</button>
+        <button class="btn-preview" onclick="addFclDetailRow()">新增明细行</button>
     </div>
 </div>
 
@@ -248,7 +250,6 @@
                         <div class="company-en" id="outEnFcl"> 深圳市南山区南头街道大汪山社区桃园东路1号西海明珠花园F座2109-8 </div>
                     </div>
                 </div>
-                <div class="fcl-subline">客户电话：<span id="outPhoneFcl">-</span></div>
             </div>
             <div class="fcl-title">整柜费用确认单</div>
             <table class="fcl-table">
@@ -323,23 +324,29 @@
                     <td id="outFclRemark">-</td>
                 </tr>
                 </tbody>
+                <tbody id="fclDetailBody">
+                <tr>
+                    <th colspan="9">明细项目</th>
+                    <th colspan="2">金额</th>
+                    <th colspan="2">备注</th>
+                </tr>
+                <tr>
+                    <td colspan="9" id="outFclDetail1Name" class="fcl-detail-name">-</td>
+                    <td colspan="2" class="fcl-amount" id="outFclDetail1Amt">-</td>
+                    <td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>
+                </tr>
+                <tr>
+                    <td colspan="9" id="outFclDetail2Name" class="fcl-detail-name">-</td>
+                    <td colspan="2" class="fcl-amount" id="outFclDetail2Amt">-</td>
+                    <td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>
+                </tr>
+                <tr>
+                    <td colspan="9" id="outFclDetail3Name" class="fcl-detail-name">-</td>
+                    <td colspan="2" class="fcl-amount" id="outFclDetail3Amt">-</td>
+                    <td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>
+                </tr>
+                </tbody>
                 <tbody>
-                <tr>
-                    <th rowspan="3">明细</th>
-                    <td colspan="9" id="outFclDetail1Name">-</td>
-                    <td class="fcl-amount" id="outFclDetail1Amt">-</td>
-                    <td colspan="2"></td>
-                </tr>
-                <tr>
-                    <td colspan="9" id="outFclDetail2Name">-</td>
-                    <td class="fcl-amount" id="outFclDetail2Amt">-</td>
-                    <td colspan="2"></td>
-                </tr>
-                <tr>
-                    <td colspan="9" id="outFclDetail3Name">-</td>
-                    <td class="fcl-amount" id="outFclDetail3Amt">-</td>
-                    <td colspan="2"></td>
-                </tr>
                 <tr>
                     <td colspan="10" class="fcl-amount" style="text-align:right;">合计（小写）：</td>
                     <td colspan="2" class="fcl-amount" id="outFclTotal">-</td>
@@ -583,6 +590,38 @@
     function doUpdateFcl() {
         const smartText = document.getElementById('fclSmart').value || "";
         const smart = parseSmartFcl(smartText);
+        // 将识别结果回填到输入框（不覆盖已有手动输入）
+        const fillIfEmpty = (id, val) => {
+            if (!val) return;
+            const el = document.getElementById(id);
+            if (el && !el.value) el.value = val;
+        };
+        fillIfEmpty('fclCustCode', smart.custCode);
+        fillIfEmpty('fclCompany', smart.company);
+        fillIfEmpty('fclPhone', smart.phone);
+        fillIfEmpty('fclLoadAddr', smart.loadAddr);
+        fillIfEmpty('fclRecvAddr', smart.recvAddr);
+        fillIfEmpty('fclBillNo', smart.billNo);
+        fillIfEmpty('fclCurrency', smart.currency);
+        fillIfEmpty('fclVessel', smart.vessel);
+        fillIfEmpty('fclBlNo', smart.blNo);
+        fillIfEmpty('fclLoadDate', smart.loadDate);
+        fillIfEmpty('fclPOL', smart.pol);
+        fillIfEmpty('fclPOD', smart.pod);
+        fillIfEmpty('fclSailDate', smart.sailDate);
+        fillIfEmpty('fclPackages', smart.packages);
+        fillIfEmpty('fclContainer', smart.container);
+        fillIfEmpty('fclCargoSize', smart.cargoSize);
+        fillIfEmpty('fclTransportFee', smart.transportFee);
+        fillIfEmpty('fclAmount', smart.amount);
+        fillIfEmpty('fclRemark', smart.remark);
+        fillIfEmpty('fclDetail1Name', smart.detail1Name);
+        fillIfEmpty('fclDetail1Amt', smart.detail1Amt);
+        fillIfEmpty('fclDetail2Name', smart.detail2Name);
+        fillIfEmpty('fclDetail2Amt', smart.detail2Amt);
+        fillIfEmpty('fclDetail3Name', smart.detail3Name);
+        fillIfEmpty('fclDetail3Amt', smart.detail3Amt);
+        const useSmart = smartText.trim().length > 0;
         const map = {
             fclCustCode: 'custCode',
             fclCompany: 'company',
@@ -605,7 +644,11 @@
             fclDetail2Name: 'detail2Name',
             fclDetail3Name: 'detail3Name'
         };
-        const getVal = (id, fallback = "") => document.getElementById(id).value || smart[map[id]] || fallback;
+        const getVal = (id, fallback = "") => {
+            const inputVal = document.getElementById(id).value;
+            if (useSmart && smart[map[id]]) return smart[map[id]];
+            return inputVal || fallback;
+        };
         const numVal = (id) => parseFloat(document.getElementById(id).value || "0") || 0;
 
         const transportFee = numVal('fclTransportFee');
@@ -651,7 +694,8 @@
 
         document.getElementById('outCnFcl').innerText = document.getElementById('inCn').value || "深圳市恒基承达商务有限公司";
         document.getElementById('outEnFcl').innerText = document.getElementById('inEn').value || "";
-        document.getElementById('outPhoneFcl').innerText = fclData.phone;
+        const phoneHeader = document.getElementById('outPhoneFcl');
+        if (phoneHeader) phoneHeader.innerText = fclData.phone;
 
         document.getElementById('outFclCustCode').innerText = fclData.custCode;
         document.getElementById('outFclCompany').innerText = fclData.company;
@@ -737,6 +781,22 @@
         updateFclTotalFromRows();
     }
 
+    function addFclDetailRow() {
+        const body = document.getElementById('fclDetailBody');
+        const tr = document.createElement('tr');
+        tr.innerHTML = [
+            `<td colspan="9" contenteditable="true" class="fcl-detail-name"></td>`,
+            `<td colspan="2" class="fcl-amount" contenteditable="true"></td>`,
+            `<td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>`
+        ].join("");
+        body.appendChild(tr);
+    }
+
+    function removeFclDetailRow(btn) {
+        const tr = btn.closest('tr');
+        if (tr) tr.remove();
+    }
+
     document.addEventListener('input', (e) => {
         const inMain = e.target && e.target.closest && e.target.closest('#fclMainBody');
         if (inMain && e.target.matches('[data-role="amount"]')) updateFclTotalFromRows();
@@ -755,25 +815,25 @@
             return m ? `${m[1]}/${m[2]}` : s;
         };
         const data = {
-            custCode: pick(/客户编码[:：]?\s*([^\s，,]+)/),
-            company: pick(/公司[:：]?\s*([^\n，,]+)/),
-            phone: pick(/联系电话[:：]?\s*([0-9\-+() ]{5,})/),
-            loadAddr: pick(/装柜地址[:：]?\s*([^\n]+)/),
-            recvAddr: pick(/收件地址[:：]?\s*([^\n]+)/),
-            billNo: pick(/账单编号[:：]?\s*([^\s，,]+)/),
-            currency: pick(/币种[:：]?\s*([A-Z]{3})/),
-            vessel: pick(/船名航次[:：]?\s*([^\n]+)/),
-            blNo: pick(/提单号[:：]?\s*([^\s，,]+)/),
-            loadDate: cnDate(pick(/装柜日期[:：]?\s*([0-9\/\-.年月日]+)/)),
-            pol: pick(/起运港[:：]?\s*([^\s，,]+)/),
-            pod: pick(/目的港[:：]?\s*([^\s，,]+)/),
-            sailDate: cnDate(pick(/开航日[:：]?\s*([0-9\/\-.年月日]+)/)),
-            packages: pick(/(?:件数|箱数)[:：]?\s*(\d+)/),
-            container: pick(/柜型[:：]?\s*([^\s，,]+)/),
-            cargoSize: pick(/货物尺码[:：]?\s*([^\s，,]+)/),
-            transportFee: pick(/运输费用[:：]?\s*([0-9]+(?:\.\d+)?)/),
-            amount: pick(/金额[:：]?\s*([0-9]+(?:\.\d+)?)/),
-            remark: pick(/备注[:：]?\s*([^\n]+)/)
+            custCode: pick(/^\s*客户编码[:：]?\s*([^\s，,]+)/m),
+            company: pick(/^\s*公司[:：]?\s*([^\n，,]+)/m),
+            phone: pick(/^\s*(?:客户电话|联系电话)[:：]?\s*([0-9\-+() ]{5,})/m),
+            loadAddr: pick(/^\s*装柜地址[:：]?\s*([^\n]+)/m),
+            recvAddr: pick(/^\s*收件地址[:：]?\s*([^\n]+)/m),
+            billNo: pick(/^\s*账单编号[:：]?\s*([^\s，,]+)/m),
+            currency: pick(/^\s*币种[:：]?\s*([A-Z]{3})/m),
+            vessel: pick(/^\s*船名航次[:：]?\s*([^\n]+)/m),
+            blNo: pick(/^\s*提单号[:：]?\s*([^\s，,]+)/m),
+            loadDate: cnDate(pick(/^\s*装柜日期[:：]?\s*([0-9\/\-.年月日]+)/m)),
+            pol: pick(/^\s*起运港[:：]?\s*([^\s，,]+)/m),
+            pod: pick(/^\s*目的港[:：]?\s*([^\s，,]+)/m),
+            sailDate: cnDate(pick(/^\s*开航日[:：]?\s*([0-9\/\-.年月日]+)/m)),
+            packages: pick(/^\s*(?:件数|箱数)[:：]?\s*(\d+)/m),
+            container: pick(/^\s*柜型[:：]?\s*([^\s，,]+)/m),
+            cargoSize: pick(/^\s*货物尺码[:：]?\s*([^\s，,]+)/m),
+            transportFee: pick(/^\s*运输费用[:：]?\s*([0-9]+(?:\.\d+)?)/m),
+            amount: pick(/^\s*金额[:：]?\s*([0-9]+(?:\.\d+)?)/m),
+            remark: pick(/^\s*备注[:：]?\s*([^\n]+)/m)
         };
 
         const exclude = new Set([
