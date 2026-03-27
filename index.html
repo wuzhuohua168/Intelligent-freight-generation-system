@@ -98,9 +98,14 @@
         .fcl-subline { text-align: center; font-size: 10px; color: #444; margin: 2px 0; }
         .fcl-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; }
         .fcl-table th, .fcl-table td { border: 1px solid #000; padding: 6px 4px; text-align: center; word-break: break-all; }
+        .fcl-table td:first-child, .fcl-table th:first-child { white-space: nowrap; }
         .fcl-table th { background: #f5f5f5; }
         .fcl-amount { font-weight: bold; }
         .fcl-detail-name { white-space: pre-wrap; text-align: left; padding-left: 6px; }
+        @media (max-width: 768px) {
+            .fcl-table { font-size: 9px; }
+            .fcl-table th, .fcl-table td { padding: 4px 2px; }
+        }
         .fcl-wrap { width: 1123px; min-height: 794px; padding: 40px 40px; }
         .hidden { display: none !important; }
     </style>
@@ -254,19 +259,19 @@
             <div class="fcl-title">整柜费用确认单</div>
             <table class="fcl-table">
                 <colgroup>
+                    <col style="width:8%">
+                    <col style="width:9%">
+                    <col style="width:10%">
+                    <col style="width:8%">
+                    <col style="width:8%">
+                    <col style="width:8%">
+                    <col style="width:8%">
                     <col style="width:6%">
-                    <col style="width:10%">
-                    <col style="width:10%">
-                    <col style="width:8%">
-                    <col style="width:8%">
-                    <col style="width:8%">
-                    <col style="width:8%">
-                    <col style="width:6%">
                     <col style="width:8%">
                     <col style="width:10%">
                     <col style="width:8%">
                     <col style="width:8%">
-                    <col style="width:10%">
+                    <col style="width:9%">
                 </colgroup>
                 <tbody>
                 <tr>
