@@ -208,7 +208,7 @@
         <div class="input-item input-wide"><label>智能识别信息</label><textarea id="fclSmart" placeholder="在此粘贴整柜信息，自动识别填入..."></textarea></div>
         <div class="input-item"><label>客户编码</label><input type="text" id="fclCustCode" placeholder="客户编码"></div>
         <div class="input-item"><label>公司</label><input type="text" id="fclCompany" placeholder="公司名称"></div>
-        <div class="input-item"><label>客户电话</label><input type="text" id="fclPhone" placeholder="客户电话"></div>
+        <div class="input-item"><label>电话</label><input type="text" id="fclPhone" placeholder="电话"></div>
         <div class="input-item"><label>装柜地址</label><input type="text" id="fclLoadAddr" placeholder="装柜地址"></div>
         <div class="input-item"><label>收件地址</label><input type="text" id="fclRecvAddr" placeholder="收件地址"></div>
         <div class="input-item"><label>账单编号</label><input type="text" id="fclBillNo" placeholder="账单编号"></div>
@@ -278,7 +278,7 @@
                 <tr>
                     <th>装柜地址</th>
                     <td colspan="5" id="outFclLoadAddr">-</td>
-                    <th>客户电话</th>
+                    <th>电话</th>
                     <td colspan="6" id="outFclPhone">-</td>
                 </tr>
                 <tr>
@@ -817,7 +817,7 @@
         const data = {
             custCode: pick(/^\s*客户编码[:：]?\s*([^\s，,]+)/m),
             company: pick(/^\s*公司[:：]?\s*([^\n，,]+)/m),
-            phone: pick(/^\s*(?:客户电话|联系电话)[:：]?\s*([0-9\-+() ]{5,})/m),
+            phone: pick(/^\s*(?:电话|联系电话)[:：]?\s*([0-9\-+() ]{5,})/m),
             loadAddr: pick(/^\s*装柜地址[:：]?\s*([^\n]+)/m),
             recvAddr: pick(/^\s*收件地址[:：]?\s*([^\n]+)/m),
             billNo: pick(/^\s*账单编号[:：]?\s*([^\s，,]+)/m),
