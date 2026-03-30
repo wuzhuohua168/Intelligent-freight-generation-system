@@ -932,7 +932,13 @@
     }
 
     async function processFileFcl(type) {
-        if (!fclData.company || fclData.company === '-') { alert("请先点击【更新整柜预览】"); return; }
+        // 确保先刷新一次预览数据
+        doUpdateFcl();
+        const hasData = [
+            fclData.company, fclData.custCode, fclData.billNo, fclData.vessel,
+            fclData.blNo, fclData.loadDate, fclData.pol, fclData.pod
+        ].some(v => String(v || "").trim().length > 0);
+        if (!hasData) { alert("请先点击【更新整柜预览】"); return; }
 
         const d = new Date();
         const dateStr = `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`;
