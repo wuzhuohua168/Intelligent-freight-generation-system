@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>HGCD费用生成系统 v3.9</title>
+    <title>HGCD货运费用生成系统 v3.9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -942,7 +942,8 @@
 
         const d = new Date();
         const dateStr = `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`;
-        const fileName = `${fclData.company}_整柜费用确认单_${dateStr}.${type}`;
+        const fclName = fclData.company || fclData.custCode || "客户";
+        const fileName = `${fclName}_整柜费用确认单_${dateStr}.${type}`;
 
         let blob;
         if (type === 'pdf') {
