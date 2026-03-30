@@ -380,6 +380,31 @@
 
     const AIR_CACHE_KEY = "freight_air_cache_v1";
     const FCL_CACHE_KEY = "freight_fcl_cache_v1";
+    const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent);
+
+    async function exportPdfFromElement(element, fileName, orientation = 'p') {
+        const scale = isIOS ? 1.5 : 2.5;
+        const canvas = await html2canvas(element, { scale, useCORS: true, backgroundColor: "#ffffff" });
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF(orientation, 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = (canvas.height * pageWidth) / canvas.width;
+        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+        const blob = pdf.output('blob');
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: blob.type })] })) {
+            await navigator.share({ files: [new File([blob], fileName, { type: blob.type })], title: fileName });
+            return;
+        }
+        if (isIOS) {
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            return;
+        }
+        downloadLocal(blob, fileName);
+    }
 
     function saveCache(type) {
         try {
@@ -869,14 +894,8 @@
         let blob;
         if (type === 'pdf') {
             const element = document.getElementById('capture-area');
-            const canvas = await html2canvas(element, { scale: 2.5, useCORS: true });
-            const imgData = canvas.toDataURL('image/jpeg', 0.9);
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = (canvas.height * pageWidth) / canvas.width;
-            pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
-            blob = pdf.output('blob');
+            await exportPdfFromElement(element, fileName, 'p');
+            return;
         } else {
             const mainRows = Array.from(document.querySelectorAll('#airMainBody tr')).map((row) => {
                 const cells = Array.from(row.children);
@@ -922,14 +941,8 @@
         let blob;
         if (type === 'pdf') {
             const element = document.getElementById('capture-area-fcl');
-            const canvas = await html2canvas(element, { scale: 2.5, useCORS: true });
-            const imgData = canvas.toDataURL('image/jpeg', 0.9);
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('l', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = (canvas.height * pageWidth) / canvas.width;
-            pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
-            blob = pdf.output('blob');
+            await exportPdfFromElement(element, fileName, 'l');
+            return;
         } else {
             const mainRows = Array.from(document.querySelectorAll('#fclMainBody tr')).map((row) => {
                 const cells = Array.from(row.children);
