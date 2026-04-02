@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>HGCD报价系统 v3.9</title>
+    <title>HGCD费用系统 v3.9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -216,6 +216,8 @@
     <div class="config-header"><h3>2. 整柜费用单</h3></div>
     <div class="form-grid">
         <div class="input-item input-wide"><label>智能识别信息</label><textarea id="fclSmart" placeholder="在此粘贴整柜信息，自动识别填入..."></textarea></div>
+        <div class="input-item"><label>整柜公司名（表头）</label><input type="text" id="fclHeaderCompany" placeholder="整柜公司名"></div>
+        <div class="input-item"><label>整柜公司地址（表头）</label><input type="text" id="fclHeaderAddr" placeholder="整柜公司地址"></div>
         <div class="input-item"><label>客户编码</label><input type="text" id="fclCustCode" placeholder="客户编码"></div>
         <div class="input-item"><label>公司</label><input type="text" id="fclCompany" placeholder="公司名称"></div>
         <div class="input-item"><label>电话</label><input type="text" id="fclPhone" placeholder="电话"></div>
@@ -443,7 +445,7 @@
                 localStorage.setItem(AIR_CACHE_KEY, JSON.stringify(payload));
             } else {
                 const ids = [
-                    'fclSmart','fclCustCode','fclCompany','fclPhone','fclLoadAddr','fclRecvAddr','fclBillNo',
+                    'fclSmart','fclHeaderCompany','fclHeaderAddr','fclCustCode','fclCompany','fclPhone','fclLoadAddr','fclRecvAddr','fclBillNo',
                     'fclCurrency','fclVessel','fclBlNo','fclLoadDate','fclPOL','fclPOD','fclSailDate',
                     'fclPackages','fclContainer','fclCargoSize','fclTransportFee','fclAmount','fclRemark',
                     'fclDetail1Name','fclDetail1Amt','fclDetail2Name','fclDetail2Amt','fclDetail3Name','fclDetail3Amt'
@@ -748,8 +750,10 @@
             const el = document.getElementById(id);
             if (el) el.innerText = val;
         };
-        setText('outCnFcl', document.getElementById('inCn').value || "深圳市恒基承达商务有限公司");
-        setText('outEnFcl', document.getElementById('inEn').value || "");
+        const headerCompany = document.getElementById('fclHeaderCompany').value || document.getElementById('inCn').value || "深圳市恒基承达商务有限公司";
+        const headerAddr = document.getElementById('fclHeaderAddr').value || document.getElementById('inEn').value || "";
+        setText('outCnFcl', headerCompany);
+        setText('outEnFcl', headerAddr);
         setText('outPhoneFcl', fclData.phone);
 
         setText('outFclCustCode', fclData.custCode);
