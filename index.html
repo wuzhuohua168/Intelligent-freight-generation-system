@@ -244,7 +244,7 @@
         <div class="input-item"><label>汇率</label><input type="text" id="fclBillNo" placeholder="汇率"></div>
         <div class="input-item"><label>币种</label><input type="text" id="fclCurrency" value="CNY"></div>
         <div class="input-item"><label>船名航次</label><input type="text" id="fclVessel" placeholder="船名航次"></div>
-        <div class="input-item"><label>提单号</label><input type="text" id="fclBlNo" placeholder="提单号"></div>
+        <div class="input-item"><label>货物类型</label><input type="text" id="fclBlNo" placeholder="货物类型"></div>
         <div class="input-item"><label>装柜日期</label><input type="text" id="fclLoadDate" placeholder="YYYY/M/D"></div>
         <div class="input-item"><label>起运港</label><input type="text" id="fclPOL" placeholder="起运港"></div>
         <div class="input-item"><label>目的港</label><input type="text" id="fclPOD" placeholder="目的港"></div>
@@ -328,7 +328,7 @@
                 <tr>
                     <th>序号</th>
                     <th>船名航次</th>
-                    <th>提单号</th>
+                    <th>货物类型</th>
                     <th>装柜日期</th>
                     <th>起运港</th>
                     <th>目的港</th>
@@ -996,7 +996,7 @@
             billNo: pick(/^\s*汇率[:：]?\s*([^\s，,]+)/m),
             currency: pick(/^\s*币种[:：]?\s*([A-Z]{3})/m),
             vessel: pick(/^\s*船名航次[:：]?\s*([^\n]+)/m),
-            blNo: pick(/^\s*提单号[:：]?\s*([^\s，,]+)/m),
+            blNo: pick(/^\s*货物类型[:：]?\s*([^\s，,]+)/m),
             loadDate: cnDate(pick(/^\s*装柜日期[:：]?\s*([0-9\/\-.年月日]+)/m)),
             pol: pick(/^\s*起运港[:：]?\s*([^\s，,]+)/m),
             pod: pick(/^\s*目的港[:：]?\s*([^\s，,]+)/m),
@@ -1011,7 +1011,7 @@
 
         const exclude = new Set([
             "运输费用", "金额", "汇率", "客户编码", "公司", "联系电话", "装柜地址", "收件地址",
-            "币种", "船名航次", "提单号", "装柜日期", "起运港", "目的港", "开航日", "件数", "箱数",
+            "币种", "船名航次", "货物类型", "装柜日期", "起运港", "目的港", "开航日", "件数", "箱数",
             "柜型", "货物尺码", "备注"
         ]);
         const detailMatches = [];
@@ -1112,7 +1112,7 @@
                 mainRows.push([fclData.custCode, fclData.company, fclData.phone, fclData.loadAddr, fclData.recvAddr, fclData.billNo, fclData.currency, fclData.vessel, fclData.blNo, fclData.loadDate, fclData.pol, fclData.pod, fclData.sailDate, fclData.packages, fclData.container, fclData.cargoSize, fclData.transportFee, fclData.amount, fclData.remark]);
             }
             const csvRows = [
-                ["客户编码", "公司", "联系电话", "装柜地址", "收件地址", "汇率", "币种", "序号", "船名航次", "提单号", "装柜日期", "起运港", "目的港", "开航日", "件数", "柜型", "货物尺码", "运输费用", "金额", "备注", "明细1", "明细1金额", "明细2", "明细2金额", "明细3", "明细3金额", "合计"],
+                ["客户编码", "公司", "联系电话", "装柜地址", "收件地址", "汇率", "币种", "序号", "船名航次", "货物类型", "装柜日期", "起运港", "目的港", "开航日", "件数", "柜型", "货物尺码", "运输费用", "金额", "备注", "明细1", "明细1金额", "明细2", "明细2金额", "明细3", "明细3金额", "合计"],
                 ...mainRows.map(r => [...r, fclData.detail1Name, fclData.detail1Amt, fclData.detail2Name, fclData.detail2Amt, fclData.detail3Name, fclData.detail3Amt, fclData.total])
             ];
             const csvString = "\ufeff" + csvRows.map(row => row.map(v => `"${v}"`).join(",")).join("\n");
