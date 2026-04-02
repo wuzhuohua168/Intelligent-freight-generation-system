@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>HGCD费用系统 v3.9</title>
+    <title>HGCD费用生成系统 v3.9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -120,13 +120,22 @@
 <div id="tab-air" class="tab-content active">
 <div class="config-panel">
     <div class="config-panel">
-        <div class="config-header"><h3>1. 散货费用单</h3></div>
-        <div class="form-grid">
-            <div class="input-item"><label>上传 Logo</label><input type="file" id="upLogo" accept="image/*"></div>
-            <div class="input-item"><label>公司中英名称</label>
-                <input type="text" id="inCn" value="深圳市恒基承达商务有限公司">
-                <input type="text" id="inEn" value="深圳市南山区南头街道大汪山社区桃园东路1号西海明珠花园F座2109-8" style="margin-top:5px">
-            </div>
+    <div class="config-header"><h3>1. 散货费用单</h3></div>
+    <div class="form-grid">
+        <div class="input-item input-wide">
+            <label>散货表头公司选择</label>
+            <select id="airHeaderPreset" onchange="applyHeaderPreset('air', this.value)">
+                <option value="">请选择</option>
+                <option value="hc">合辰供应链（深圳）有限公司</option>
+                <option value="hg">深圳市恒基承达商务有限公司</option>
+                <option value="custom">公司手动输入</option>
+            </select>
+        </div>
+        <div class="input-item"><label>上传 Logo</label><input type="file" id="upLogo" accept="image/*"></div>
+        <div class="input-item"><label>公司中英名称</label>
+            <input type="text" id="inCn" value="深圳市恒基承达商务有限公司">
+            <input type="text" id="inEn" value="深圳市南山区南头街道大汪山社区桃园东路1号西海明珠花园F座2109-8" style="margin-top:5px">
+        </div>
             <div class="input-item"><label>客户名称</label><input type="text" id="inCust" placeholder="客户姓名"></div>
             <div class="input-item"><label>路线设置 (例如: 出发 → 目的地)</label><input type="text" id="inRoute" value="中国🇨🇳 → 日本🇯🇵"></div>
             <div class="input-item"><label>运输方式</label><input type="text" id="inShip" value="空运"></div>
@@ -215,6 +224,15 @@
 <div class="config-panel">
     <div class="config-header"><h3>2. 整柜费用单</h3></div>
     <div class="form-grid">
+        <div class="input-item input-wide">
+            <label>整柜表头公司选择</label>
+            <select id="fclHeaderPreset" onchange="applyHeaderPreset('fcl', this.value)">
+                <option value="">请选择</option>
+                <option value="hc">合辰供应链（深圳）有限公司</option>
+                <option value="hg">深圳市恒基承达商务有限公司</option>
+                <option value="custom">公司手动输入</option>
+            </select>
+        </div>
         <div class="input-item input-wide"><label>智能识别信息</label><textarea id="fclSmart" placeholder="在此粘贴整柜信息，自动识别填入..."></textarea></div>
         <div class="input-item"><label>整柜公司名（表头）</label><input type="text" id="fclHeaderCompany" placeholder="整柜公司名"></div>
         <div class="input-item"><label>整柜公司地址（表头）</label><input type="text" id="fclHeaderAddr" placeholder="整柜公司地址"></div>
@@ -433,6 +451,7 @@
         try {
             if (type === 'air') {
                 const payload = {
+                    airHeaderPreset: document.getElementById('airHeaderPreset').value,
                     inCn: document.getElementById('inCn').value,
                     inEn: document.getElementById('inEn').value,
                     inCust: document.getElementById('inCust').value,
@@ -445,7 +464,7 @@
                 localStorage.setItem(AIR_CACHE_KEY, JSON.stringify(payload));
             } else {
                 const ids = [
-                    'fclSmart','fclHeaderCompany','fclHeaderAddr','fclCustCode','fclCompany','fclPhone','fclLoadAddr','fclRecvAddr','fclBillNo',
+                    'fclSmart','fclHeaderPreset','fclHeaderCompany','fclHeaderAddr','fclCustCode','fclCompany','fclPhone','fclLoadAddr','fclRecvAddr','fclBillNo',
                     'fclCurrency','fclVessel','fclBlNo','fclLoadDate','fclPOL','fclPOD','fclSailDate',
                     'fclPackages','fclContainer','fclCargoSize','fclTransportFee','fclAmount','fclRemark',
                     'fclDetail1Name','fclDetail1Amt','fclDetail2Name','fclDetail2Amt','fclDetail3Name','fclDetail3Amt'
@@ -463,11 +482,13 @@
             if (air) {
                 const v = JSON.parse(air);
                 Object.keys(v).forEach(k => { if (document.getElementById(k)) document.getElementById(k).value = v[k]; });
+                if (v.airHeaderPreset) applyHeaderPreset('air', v.airHeaderPreset, true);
             }
             const fcl = localStorage.getItem(FCL_CACHE_KEY);
             if (fcl) {
                 const v = JSON.parse(fcl);
                 Object.keys(v).forEach(k => { if (document.getElementById(k)) document.getElementById(k).value = v[k]; });
+                if (v.fclHeaderPreset) applyHeaderPreset('fcl', v.fclHeaderPreset, true);
             }
         } catch (e) {}
     }
@@ -479,6 +500,7 @@
             ids.forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
             document.getElementById('inCn').value = "深圳市恒基承达商务有限公司";
             document.getElementById('inEn').value = "深圳市南山区南头街道大汪山社区桃园东路1号西海明珠花园F座2109-8";
+            document.getElementById('airHeaderPreset').value = "";
         } else {
             localStorage.removeItem(FCL_CACHE_KEY);
             const ids = [
@@ -489,6 +511,9 @@
             ];
             ids.forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
             document.getElementById('fclCurrency').value = "CNY";
+            document.getElementById('fclHeaderPreset').value = "";
+            document.getElementById('fclHeaderCompany').value = "";
+            document.getElementById('fclHeaderAddr').value = "";
         }
     }
 
@@ -501,6 +526,30 @@
         } else {
             document.getElementById('tab-air').classList.add('active');
             document.querySelectorAll('.tab-item')[0].classList.add('active');
+        }
+    }
+
+    function applyHeaderPreset(scope, value, skipPresetValue) {
+        const presets = {
+            hc: {
+                name: "合辰供应链（深圳）有限公司",
+                addr: "深圳市福田区沙头街道天安社区泰然五路10号天安数码城天吉大厦五层5D1-D12"
+            },
+            hg: {
+                name: "深圳市恒基承达商务有限公司",
+                addr: "深圳市南山区南头街道大汪山社区桃园东路1号西海明珠花园F座2109-8"
+            }
+        };
+        if (scope === 'air') {
+            if (!skipPresetValue) document.getElementById('airHeaderPreset').value = value;
+            if (value === 'custom' || !presets[value]) return;
+            document.getElementById('inCn').value = presets[value].name;
+            document.getElementById('inEn').value = presets[value].addr;
+        } else {
+            if (!skipPresetValue) document.getElementById('fclHeaderPreset').value = value;
+            if (value === 'custom' || !presets[value]) return;
+            document.getElementById('fclHeaderCompany').value = presets[value].name;
+            document.getElementById('fclHeaderAddr').value = presets[value].addr;
         }
     }
 
