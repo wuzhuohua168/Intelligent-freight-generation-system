@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>HGCD货运费用生成系统 v3.9</title>
+    <title>HGCD报价系统 v3.9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -108,6 +108,11 @@
         }
         .fcl-wrap { width: 1123px; min-height: 794px; padding: 40px 40px; }
         .hidden { display: none !important; }
+        .exporting .no-export { display: none !important; }
+        .exporting #capture-area button,
+        .exporting #capture-area-fcl button {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -126,7 +131,7 @@
             <div class="input-item"><label>路线设置 (例如: 出发 → 目的地)</label><input type="text" id="inRoute" value="中国🇨🇳 → 日本🇯🇵"></div>
             <div class="input-item"><label>运输方式</label><input type="text" id="inShip" value="空运"></div>
             <div class="input-item"><label>表格备注 (含附加费)</label><input type="text" id="inTableNote" placeholder="例如：报关费100"></input></div>
-            <div class="input-item"><label>报价单价 (¥/kg)</label><input type="number" id="inPrice" value="" step="0.01"></div>
+            <div class="input-item"><label>确认单价 (¥/kg)</label><input type="number" id="inPrice" value="" step="0.01"></div>
             <div class="input-item input-wide"><label>智能识别信息</label><textarea id="inSmart" placeholder="在此粘贴单号、计费重、品名、件数等信息..."></textarea></div>
         </div>
         <div class="action-area">
@@ -216,7 +221,7 @@
         <div class="input-item"><label>电话</label><input type="text" id="fclPhone" placeholder="电话"></div>
         <div class="input-item"><label>装柜地址</label><input type="text" id="fclLoadAddr" placeholder="装柜地址"></div>
         <div class="input-item"><label>收件地址</label><input type="text" id="fclRecvAddr" placeholder="收件地址"></div>
-        <div class="input-item"><label>账单编号</label><input type="text" id="fclBillNo" placeholder="账单编号"></div>
+        <div class="input-item"><label>汇率</label><input type="text" id="fclBillNo" placeholder="汇率"></div>
         <div class="input-item"><label>币种</label><input type="text" id="fclCurrency" value="CNY"></div>
         <div class="input-item"><label>船名航次</label><input type="text" id="fclVessel" placeholder="船名航次"></div>
         <div class="input-item"><label>提单号</label><input type="text" id="fclBlNo" placeholder="提单号"></div>
@@ -235,12 +240,16 @@
         <div class="input-item"><label>明细3（名称/金额）</label><input type="text" id="fclDetail3Name" placeholder="明细名称"><input type="number" id="fclDetail3Amt" placeholder="金额" style="margin-top:5px"></div>
     </div>
     <div class="action-area">
-        <button class="btn-preview" onclick="doUpdateFcl()">① 更新整柜预览</button>
+        <button class="btn-preview" onclick="doUpdateFcl({ preserveDetailRows: true })">① 更新整柜预览</button>
         <button class="btn-pdf" onclick="processFileFcl('pdf')">② 分享/下载 PDF</button>
         <button class="btn-csv" onclick="processFileFcl('csv')">③ 分享/下载 CSV</button>
         <button class="btn-preview btn-clear" onclick="clearCache('fcl')">清除缓存</button>
         <button class="btn-preview" onclick="addFclRow()">新增序号行</button>
         <button class="btn-preview" onclick="addFclDetailRow()">新增明细行</button>
+        <input type="number" id="fclDeleteRowIndex" placeholder="删除序号行" style="width:110px">
+        <button class="btn-preview no-export" onclick="removeFclRowByIndex()">删除序号行</button>
+        <input type="number" id="fclDeleteDetailIndex" placeholder="删除明细行" style="width:110px">
+        <button class="btn-preview no-export" onclick="removeFclDetailRowByIndex()">删除明细行</button>
     </div>
 </div>
 
@@ -289,7 +298,7 @@
                 <tr>
                     <th>收件地址</th>
                     <td colspan="5" id="outFclRecvAddr">-</td>
-                    <th>账单编号</th>
+                    <th>汇率</th>
                     <td colspan="4" id="outFclBillNo">-</td>
                     <th>币种</th>
                     <td id="outFclCurrency">CNY</td>
@@ -331,24 +340,9 @@
                 </tbody>
                 <tbody id="fclDetailBody">
                 <tr>
-                    <th colspan="9">明细项目</th>
+                    <th colspan="9">服务类目</th>
                     <th colspan="2">金额</th>
                     <th colspan="2">备注</th>
-                </tr>
-                <tr>
-                    <td colspan="9" id="outFclDetail1Name" class="fcl-detail-name">-</td>
-                    <td colspan="2" class="fcl-amount" id="outFclDetail1Amt">-</td>
-                    <td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>
-                </tr>
-                <tr>
-                    <td colspan="9" id="outFclDetail2Name" class="fcl-detail-name">-</td>
-                    <td colspan="2" class="fcl-amount" id="outFclDetail2Amt">-</td>
-                    <td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>
-                </tr>
-                <tr>
-                    <td colspan="9" id="outFclDetail3Name" class="fcl-detail-name">-</td>
-                    <td colspan="2" class="fcl-amount" id="outFclDetail3Amt">-</td>
-                    <td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>
                 </tr>
                 </tbody>
                 <tbody>
@@ -383,27 +377,54 @@
     const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent);
 
     async function exportPdfFromElement(element, fileName, orientation = 'p') {
-        const scale = isIOS ? 1.5 : 2.5;
-        const canvas = await html2canvas(element, { scale, useCORS: true, backgroundColor: "#ffffff" });
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF(orientation, 'mm', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = (canvas.height * pageWidth) / canvas.width;
-        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
-        const blob = pdf.output('blob');
+        if (!element) { alert("未找到预览区域"); return; }
+        try {
+            document.body.classList.add('exporting');
+            await new Promise(r => requestAnimationFrame(r));
+            const scale = isIOS ? 1.5 : 2.5;
+            const canvas = await html2canvas(element, { scale, useCORS: true, backgroundColor: "#ffffff" });
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF(orientation, 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const imgHeight = (canvas.height * pageWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+            pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
+            heightLeft -= pageHeight;
+            while (heightLeft > 0) {
+                position -= pageHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            const blob = pdf.output('blob');
 
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: blob.type })] })) {
-            await navigator.share({ files: [new File([blob], fileName, { type: blob.type })], title: fileName });
-            return;
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: blob.type })] })) {
+                try {
+                    await navigator.share({ files: [new File([blob], fileName, { type: blob.type })], title: fileName });
+                    return;
+                } catch (err) {
+                    if (err && err.name !== 'AbortError') {
+                        downloadLocal(blob, fileName);
+                    }
+                    return;
+                }
+            }
+            if (isIOS) {
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                return;
+            }
+            downloadLocal(blob, fileName);
+        } catch (err) {
+            console.error(err);
+            alert("PDF 导出失败，请检查控制台错误信息");
+        } finally {
+            document.body.classList.remove('exporting');
         }
-        if (isIOS) {
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank');
-            setTimeout(() => URL.revokeObjectURL(url), 60000);
-            return;
-        }
-        downloadLocal(blob, fileName);
     }
 
     function saveCache(type) {
@@ -497,7 +518,7 @@
     function doUpdate() {
         const text = document.getElementById('inSmart').value;
         const inputPriceVal = document.getElementById('inPrice').value;
-        const smartPriceMatch = text.match(/(?:报价单价|运费单价|单价|报价|价格)[:：]?\s*[¥￥]?\s*(\d+(\.\d+)?)(?:\s*\/\s*(?:kg|KG))?/);
+        const smartPriceMatch = text.match(/(?:确认单价|运费单价|单价|报价|价格)[:：]?\s*[¥￥]?\s*(\d+(\.\d+)?)(?:\s*\/\s*(?:kg|KG))?/);
         const price = parseFloat(inputPriceVal || (smartPriceMatch ? smartPriceMatch[1] : "")) || 0;
         if (!inputPriceVal && smartPriceMatch) {
             document.getElementById('inPrice').value = price.toFixed(2);
@@ -617,7 +638,8 @@
         updateAirSum();
     }
 
-    function doUpdateFcl() {
+    function doUpdateFcl(options = {}) {
+        const { preserveDetailRows = false, resetDetailSum = true } = options;
         const smartText = document.getElementById('fclSmart').value || "";
         const smart = parseSmartFcl(smartText);
         // 将识别结果回填到输入框（不覆盖已有手动输入）
@@ -722,38 +744,40 @@
             total: ""
         };
 
-        document.getElementById('outCnFcl').innerText = document.getElementById('inCn').value || "深圳市恒基承达商务有限公司";
-        document.getElementById('outEnFcl').innerText = document.getElementById('inEn').value || "";
-        const phoneHeader = document.getElementById('outPhoneFcl');
-        if (phoneHeader) phoneHeader.innerText = fclData.phone;
+        const setText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+        };
+        setText('outCnFcl', document.getElementById('inCn').value || "深圳市恒基承达商务有限公司");
+        setText('outEnFcl', document.getElementById('inEn').value || "");
+        setText('outPhoneFcl', fclData.phone);
 
-        document.getElementById('outFclCustCode').innerText = fclData.custCode;
-        document.getElementById('outFclCompany').innerText = fclData.company;
-        document.getElementById('outFclLoadAddr').innerText = fclData.loadAddr;
-        document.getElementById('outFclPhone').innerText = fclData.phone;
-        document.getElementById('outFclRecvAddr').innerText = fclData.recvAddr;
-        document.getElementById('outFclBillNo').innerText = fclData.billNo;
-        document.getElementById('outFclCurrency').innerText = fclData.currency;
-        document.getElementById('outFclVessel').innerText = fclData.vessel;
-        document.getElementById('outFclBlNo').innerText = fclData.blNo;
-        document.getElementById('outFclLoadDate').innerText = fclData.loadDate;
-        document.getElementById('outFclPOL').innerText = fclData.pol;
-        document.getElementById('outFclPOD').innerText = fclData.pod;
-        document.getElementById('outFclSailDate').innerText = fclData.sailDate;
-        document.getElementById('outFclPackages').innerText = fclData.packages;
-        document.getElementById('outFclContainer').innerText = fclData.container;
-        document.getElementById('outFclCargoSize').innerText = fclData.cargoSize;
-        document.getElementById('outFclTransportFee').innerText = fclData.transportFee;
-        document.getElementById('outFclAmount').innerText = fclData.amount;
-        document.getElementById('outFclRemark').innerText = fclData.remark;
-        document.getElementById('outFclDetail1Name').innerText = fclData.detail1Name;
-        document.getElementById('outFclDetail1Amt').innerText = fclData.detail1Amt;
-        document.getElementById('outFclDetail2Name').innerText = fclData.detail2Name;
-        document.getElementById('outFclDetail2Amt').innerText = fclData.detail2Amt;
-        document.getElementById('outFclDetail3Name').innerText = fclData.detail3Name;
-        document.getElementById('outFclDetail3Amt').innerText = fclData.detail3Amt;
+        setText('outFclCustCode', fclData.custCode);
+        setText('outFclCompany', fclData.company);
+        setText('outFclLoadAddr', fclData.loadAddr);
+        setText('outFclPhone', fclData.phone);
+        setText('outFclRecvAddr', fclData.recvAddr);
+        setText('outFclBillNo', fclData.billNo);
+        setText('outFclCurrency', fclData.currency);
+        setText('outFclVessel', fclData.vessel);
+        setText('outFclBlNo', fclData.blNo);
+        setText('outFclLoadDate', fclData.loadDate);
+        setText('outFclPOL', fclData.pol);
+        setText('outFclPOD', fclData.pod);
+        setText('outFclSailDate', fclData.sailDate);
+        setText('outFclPackages', fclData.packages);
+        setText('outFclContainer', fclData.container);
+        setText('outFclCargoSize', fclData.cargoSize);
+        setText('outFclTransportFee', fclData.transportFee);
+        setText('outFclAmount', fclData.amount);
+        setText('outFclRemark', fclData.remark);
+        renderFclDetailRows([
+            { name: fclData.detail1Name, amt: fclData.detail1Amt },
+            { name: fclData.detail2Name, amt: fclData.detail2Amt },
+            { name: fclData.detail3Name, amt: fclData.detail3Amt }
+        ], preserveDetailRows);
         if (rowAmount) document.getElementById('outFclAmount').innerText = rowAmount.toFixed(2);
-        const computedTotal = updateFclTotalFromRows();
+        const computedTotal = updateFclTotalFromRows(resetDetailSum);
         fclData.total = computedTotal;
         document.getElementById('outGenAtFcl').innerText = new Date().toLocaleString();
         saveCache('fcl');
@@ -764,13 +788,52 @@
         return Number.isFinite(n) ? n : 0;
     }
 
-    function updateFclTotalFromRows() {
+    function renderFclDetailRows(items, preserveExisting = false) {
+        const body = document.getElementById('fclDetailBody');
+        if (!body) return;
+        const rows = Array.from(body.querySelectorAll('tr'));
+        if (preserveExisting) {
+            rows.slice(1).forEach(r => {
+                if (r.dataset && r.dataset.origin === "manual") r.remove();
+            });
+        } else {
+            rows.slice(1).forEach(r => r.remove()); // keep header
+        }
+        items.forEach(it => {
+            if (!it.name && !it.amt) return;
+            const tr = document.createElement('tr');
+            tr.dataset.origin = "manual";
+            tr.innerHTML = [
+                `<td colspan="9" class="fcl-detail-name">${it.name || ""}</td>`,
+                `<td colspan="2" class="fcl-amount">${it.amt || ""}</td>`,
+                `<td colspan="2"></td>`
+            ].join("");
+            body.appendChild(tr);
+        });
+    }
+
+    function updateFclTotalFromRows(resetManualDetails = false) {
         const rows = document.querySelectorAll('#fclMainBody tr');
         let total = 0;
         rows.forEach(r => {
             const cell = r.querySelector('[data-role="amount"]');
             if (cell) total += parseNum(cell.textContent);
         });
+        const inputAmount = parseNum(document.getElementById('fclAmount')?.value);
+        const detail1 = parseNum(document.getElementById('fclDetail1Amt')?.value);
+        const detail2 = parseNum(document.getElementById('fclDetail2Amt')?.value);
+        const detail3 = parseNum(document.getElementById('fclDetail3Amt')?.value);
+        const detailRows = Array.from(document.querySelectorAll('#fclDetailBody tr')).slice(1);
+        let detailRowSum = 0;
+        detailRows.forEach(r => {
+            const cell = r.querySelector('.fcl-amount');
+            if (cell) detailRowSum += parseNum(cell.textContent);
+        });
+        if (resetManualDetails) {
+            // 点击“更新整柜预览”时，以手动输入明细为准，忽略已生成的明细行累加
+            detailRowSum = 0;
+        }
+        total += inputAmount + detail1 + detail2 + detail3 + detailRowSum;
         const totalStr = total ? total.toFixed(2) : "";
         document.getElementById('outFclTotal').innerText = totalStr;
         return totalStr;
@@ -793,7 +856,7 @@
             `<td contenteditable="true"></td>`,
             `<td contenteditable="true"></td>`,
             `<td contenteditable="true" data-role="amount"></td>`,
-            `<td><div contenteditable="true" data-role="remark"></div><button type="button" onclick="removeFclRow(this)">删除</button></td>`
+            `<td><div contenteditable="true" data-role="remark"></div></td>`
         ];
         tr.innerHTML = cols.join("");
         body.appendChild(tr);
@@ -811,13 +874,27 @@
         updateFclTotalFromRows();
     }
 
+    function removeFclRowByIndex() {
+        const idx = parseInt(document.getElementById('fclDeleteRowIndex')?.value || "", 10);
+        if (!idx || idx < 1) return;
+        const rows = document.querySelectorAll('#fclMainBody tr');
+        const tr = rows[idx - 1];
+        if (tr) tr.remove();
+        document.querySelectorAll('#fclMainBody tr').forEach((row, i) => {
+            const cell = row.querySelector('td');
+            if (cell) cell.textContent = i + 1;
+        });
+        updateFclTotalFromRows();
+    }
+
     function addFclDetailRow() {
         const body = document.getElementById('fclDetailBody');
         const tr = document.createElement('tr');
+        tr.dataset.origin = "user";
         tr.innerHTML = [
             `<td colspan="9" contenteditable="true" class="fcl-detail-name"></td>`,
             `<td colspan="2" class="fcl-amount" contenteditable="true"></td>`,
-            `<td colspan="2"><button type="button" onclick="removeFclDetailRow(this)">删除</button></td>`
+            `<td colspan="2"><div contenteditable="true" data-role="detail-remark"></div></td>`
         ].join("");
         body.appendChild(tr);
     }
@@ -827,9 +904,22 @@
         if (tr) tr.remove();
     }
 
+    function removeFclDetailRowByIndex() {
+        const idx = parseInt(document.getElementById('fclDeleteDetailIndex')?.value || "", 10);
+        if (!idx || idx < 1) return;
+        const rows = document.querySelectorAll('#fclDetailBody tr');
+        const tr = rows[idx]; // 0 is header
+        if (tr) tr.remove();
+    }
+
     document.addEventListener('input', (e) => {
         const inMain = e.target && e.target.closest && e.target.closest('#fclMainBody');
         if (inMain && e.target.matches('[data-role="amount"]')) updateFclTotalFromRows();
+        const inDetail = e.target && e.target.closest && e.target.closest('#fclDetailBody');
+        if (inDetail && e.target.classList && e.target.classList.contains('fcl-amount')) updateFclTotalFromRows();
+        if (e.target && e.target.id && ['fclAmount','fclDetail1Amt','fclDetail2Amt','fclDetail3Amt'].includes(e.target.id)) {
+            updateFclTotalFromRows();
+        }
         const inAir = e.target && e.target.closest && e.target.closest('#airMainBody');
         if (inAir) updateAirSum();
     });
@@ -850,7 +940,7 @@
             phone: pick(/^\s*(?:电话|联系电话)[:：]?\s*([0-9\-+() ]{5,})/m),
             loadAddr: pick(/^\s*装柜地址[:：]?\s*([^\n]+)/m),
             recvAddr: pick(/^\s*收件地址[:：]?\s*([^\n]+)/m),
-            billNo: pick(/^\s*账单编号[:：]?\s*([^\s，,]+)/m),
+            billNo: pick(/^\s*汇率[:：]?\s*([^\s，,]+)/m),
             currency: pick(/^\s*币种[:：]?\s*([A-Z]{3})/m),
             vessel: pick(/^\s*船名航次[:：]?\s*([^\n]+)/m),
             blNo: pick(/^\s*提单号[:：]?\s*([^\s，,]+)/m),
@@ -867,7 +957,7 @@
         };
 
         const exclude = new Set([
-            "运输费用", "金额", "账单编号", "客户编码", "公司", "联系电话", "装柜地址", "收件地址",
+            "运输费用", "金额", "汇率", "客户编码", "公司", "联系电话", "装柜地址", "收件地址",
             "币种", "船名航次", "提单号", "装柜日期", "起运港", "目的港", "开航日", "件数", "箱数",
             "柜型", "货物尺码", "备注"
         ]);
@@ -885,11 +975,15 @@
     }
 
     async function processFile(type) {
-        if (!globalData.no || globalData.no === '单号') { alert("请先点击【更新预览内容】"); return; }
-        
+        // 导出前刷新一次，避免未更新导致阻断
+        doUpdate();
+
         const d = new Date();
         const dateStr = `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`;
-        const fileName = `${globalData.cust}_${globalData.no}_${globalData.qty}件_报价单_${dateStr}.${type}`;
+        const custSafe = String(globalData.cust || "客户").replace(/[\\/:*?"<>|]/g, "_");
+        const noSafe = String(globalData.no || "未填单号").replace(/[\\/:*?"<>|]/g, "_");
+        const qtySafe = String(globalData.qty || 0);
+        const fileName = `${custSafe}_${noSafe}_${qtySafe}件_确认单_${dateStr}.${type}`;
         
         let blob;
         if (type === 'pdf') {
@@ -933,7 +1027,7 @@
 
     async function processFileFcl(type) {
         // 确保先刷新一次预览数据
-        doUpdateFcl();
+        doUpdateFcl({ preserveDetailRows: true, resetDetailSum: false });
         const hasData = [
             fclData.company, fclData.custCode, fclData.billNo, fclData.vessel,
             fclData.blNo, fclData.loadDate, fclData.pol, fclData.pod
@@ -942,8 +1036,8 @@
 
         const d = new Date();
         const dateStr = `${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}`;
-        const fclName = fclData.company || fclData.custCode || "客户";
-        const fileName = `${fclName}_整柜费用确认单_${dateStr}.${type}`;
+        const safeCompany = String(fclData.company || "").replace(/[\\/:*?"<>|]/g, "_").trim();
+        const fileName = `${safeCompany}整柜费用确认单${dateStr}.${type}`;
 
         let blob;
         if (type === 'pdf') {
@@ -965,7 +1059,7 @@
                 mainRows.push([fclData.custCode, fclData.company, fclData.phone, fclData.loadAddr, fclData.recvAddr, fclData.billNo, fclData.currency, fclData.vessel, fclData.blNo, fclData.loadDate, fclData.pol, fclData.pod, fclData.sailDate, fclData.packages, fclData.container, fclData.cargoSize, fclData.transportFee, fclData.amount, fclData.remark]);
             }
             const csvRows = [
-                ["客户编码", "公司", "联系电话", "装柜地址", "收件地址", "账单编号", "币种", "序号", "船名航次", "提单号", "装柜日期", "起运港", "目的港", "开航日", "件数", "柜型", "货物尺码", "运输费用", "金额", "备注", "明细1", "明细1金额", "明细2", "明细2金额", "明细3", "明细3金额", "合计"],
+                ["客户编码", "公司", "联系电话", "装柜地址", "收件地址", "汇率", "币种", "序号", "船名航次", "提单号", "装柜日期", "起运港", "目的港", "开航日", "件数", "柜型", "货物尺码", "运输费用", "金额", "备注", "明细1", "明细1金额", "明细2", "明细2金额", "明细3", "明细3金额", "合计"],
                 ...mainRows.map(r => [...r, fclData.detail1Name, fclData.detail1Amt, fclData.detail2Name, fclData.detail2Amt, fclData.detail3Name, fclData.detail3Amt, fclData.total])
             ];
             const csvString = "\ufeff" + csvRows.map(row => row.map(v => `"${v}"`).join(",")).join("\n");
